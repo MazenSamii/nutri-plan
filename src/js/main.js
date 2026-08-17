@@ -1301,7 +1301,100 @@ function DisplayByCategory() {
 
   barCodeGrid.innerHTML = catFilterBtn;
 }
+// =====================================================
+// GRID / LIST VIEW
+// =====================================================
 
+var gridViewBtn = document.querySelector("#grid-view-btn");
+var listViewBtn = document.querySelector("#list-view-btn");
+
+var isListView = false;
+
+function changeToListView() {
+  isListView = true;
+
+  recipesGrid.classList.remove("grid-cols-4");
+  recipesGrid.classList.add("grid-cols-1");
+
+  var cards = recipesGrid.querySelectorAll(".recipe-card");
+
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var imageBox = card.querySelector(".relative");
+    var contentBox = card.querySelector(".p-4");
+    var badges = card.querySelector(".absolute");
+
+    card.classList.add("flex", "h-40");
+
+    imageBox.classList.remove("h-48");
+    imageBox.classList.add("w-40", "h-full", "shrink-0");
+
+    if (badges) {
+      badges.style.display = "none";
+    }
+
+    contentBox.classList.add("flex-1", "flex", "flex-col", "justify-center");
+
+    // List button active
+    listViewBtn.classList.add("bg-white", "rounded-md", "shadow-sm");
+    listViewBtn.querySelector("i").classList.remove("text-gray-500");
+    listViewBtn.querySelector("i").classList.add("text-gray-700");
+
+    // Grid button inactive
+    gridViewBtn.classList.remove("bg-white", "rounded-md", "shadow-sm");
+    gridViewBtn.querySelector("i").classList.remove("text-gray-700");
+    gridViewBtn.querySelector("i").classList.add("text-gray-500");
+  }
+}
+
+function changeToGridView() {
+  isListView = false;
+
+  recipesGrid.classList.remove("grid-cols-1");
+  recipesGrid.classList.add("grid-cols-4");
+
+  var cards = recipesGrid.querySelectorAll(".recipe-card");
+
+  for (var i = 0; i < cards.length; i++) {
+    var card = cards[i];
+    var imageBox = card.querySelector(".relative");
+    var contentBox = card.querySelector(".p-4");
+    var badges = card.querySelector(".absolute");
+
+    // Card
+    card.classList.remove("flex", "h-40");
+
+    // Image
+    imageBox.classList.remove("w-40", "h-full", "shrink-0");
+    imageBox.classList.add("h-48");
+
+    // Show badges again
+    if (badges) {
+      badges.style.display = "flex";
+    }
+
+    // Content
+    contentBox.classList.remove("flex-1", "flex", "flex-col", "justify-center");
+
+    // Grid button active
+    gridViewBtn.classList.add("bg-white", "rounded-md", "shadow-sm");
+    gridViewBtn.querySelector("i").classList.remove("text-gray-500");
+    gridViewBtn.querySelector("i").classList.add("text-gray-700");
+
+    // List button inactive
+    listViewBtn.classList.remove("bg-white", "rounded-md", "shadow-sm");
+    listViewBtn.querySelector("i").classList.remove("text-gray-700");
+    listViewBtn.querySelector("i").classList.add("text-gray-500");
+  }
+}
+
+gridViewBtn.addEventListener("click", function () {
+  changeToGridView();
+});
+
+listViewBtn.addEventListener("click", function () {
+  changeToListView();
+});
 // =====================================================
 // PRODUCT DETAILS MODAL
 // =====================================================
@@ -1562,9 +1655,9 @@ logProductBtn.addEventListener("click", function () {
   localStorage.setItem("foodLog", JSON.stringify(foodLog));
 
   displayFoodLog();
-
+  showMealLogged();
   closeProductModalView();
-
+  showMealLogged();
   console.log("Logged Product:", loggedProduct);
   console.log("Food Log:", foodLog);
 });
@@ -1619,6 +1712,10 @@ function showSection(sectionName) {
     headerTitle.innerHTML = "Daily Food Log";
     headerDescription.innerHTML =
       "Track and monitor your daily nutrition intake";
+    displayFoodLog();
+    updateNutrition();
+    displayFoodLogDate();
+    displayWeeklyChart();
   }
 }
 
@@ -1691,7 +1788,6 @@ function openPageFromHash() {
 
 window.addEventListener("hashchange", openPageFromHash);
 
-openPageFromHash();
 productCategories();
 
 console.log("FOOD LOG JS LOADED");
@@ -1713,14 +1809,53 @@ function displayFoodLog() {
 
   if (foodLog.length === 0) {
     loggedItems.innerHTML = `
-      <div class="text-center py-8 text-gray-500">
-        <i class="fa-solid fa-utensils text-4xl mb-3 text-gray-300"></i>
-        <p class="font-medium">No meals logged today</p>
-        <p class="text-sm">
-          Add meals from the Meals page or scan products
-        </p>
+    <div class="text-center py-8 text-gray-500">
+      <i class="fa-solid fa-utensils text-4xl mb-3 text-gray-300"></i>
+
+      <p class="font-medium">No food logged today</p>
+
+      <p class="text-sm mb-4">
+        Start tracking your nutrition by logging meals or scanning products
+      </p>
+
+      <div class="flex justify-center gap-3">
+        <button
+          id="browse-recipes-btn"
+          class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all"
+        >
+          <i class="fa-solid fa-plus mr-2"></i>
+          Browse Recipes
+        </button>
+
+        <button
+          id="scan-product-btn"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all"
+        >
+          <i class="fa-solid fa-barcode mr-2"></i>
+          Scan Product
+        </button>
       </div>
-    `;
+    </div>
+  `;
+
+    document
+      .querySelector("#browse-recipes-btn")
+      .addEventListener("click", function () {
+        showSection("meals");
+        window.location.hash = "home";
+      });
+
+    document
+      .querySelector("#scan-product-btn")
+      .addEventListener("click", function () {
+        showSection("products");
+        window.location.hash = "products";
+      });
+
+    document.querySelector("#logged-items-count").textContent =
+      "Logged Items (0)";
+
+    document.querySelector("#clear-foodlog").style.display = "none";
 
     return;
   }
@@ -1800,13 +1935,7 @@ function displayFoodLog() {
     });
   }
 }
-clearFoodLog.addEventListener("click", function () {
-  foodLog = [];
 
-  localStorage.setItem("foodLog", JSON.stringify(foodLog));
-
-  displayFoodLog();
-});
 var logMealBtn = document.querySelector("#log-meal-btn");
 
 async function logMeal() {
@@ -1874,7 +2003,7 @@ async function logMeal() {
 
     // Display food log
     displayFoodLog();
-
+    showMealLogged();
     console.log("Food Log:", foodLog);
   } catch (error) {
     console.log("Error:", error);
@@ -1883,76 +2012,6 @@ async function logMeal() {
 
 logMealBtn.addEventListener("click", logMeal);
 displayFoodLog();
-// ==============================
-// Display Food Log Items
-// ==============================
-
-function showLoggedItems() {
-  var cartona = "";
-
-  if (foodLog.length === 0) {
-    loggedItems.innerHTML = `
-      <div class="text-center py-8 text-gray-500">
-        <i
-          class="fa-solid fa-utensils text-4xl mb-3 text-gray-300"
-        ></i>
-        <p class="font-medium">No meals logged today</p>
-        <p class="text-sm">
-          Add meals from the Meals page or scan products
-        </p>
-      </div>
-    `;
-
-    document.querySelector("#logged-items-count").textContent =
-      "Logged Items (0)";
-
-    document.querySelector("#clear-foodlog").style.display = "none";
-
-    return;
-  }
-
-  for (var i = 0; i < foodLog.length; i++) {
-    var item = foodLog[i];
-
-    cartona += `
-      <div class="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-200">
-
-        <div class="flex items-center gap-3">
-
-          <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-            <i class="fa-solid fa-utensils text-emerald-600"></i>
-          </div>
-
-          <div>
-            <p class="font-semibold text-gray-900">
-              ${item.name || item.recipeName || item.title}
-            </p>
-
-            <p class="text-sm text-gray-500">
-              ${item.calories || 0} kcal
-            </p>
-          </div>
-
-        </div>
-
-        <button
-          class="remove-food-btn text-red-500 hover:text-red-600"
-          data-index="${i}"
-        >
-          <i class="fa-solid fa-trash"></i>
-        </button>
-
-      </div>
-    `;
-  }
-
-  loggedItems.innerHTML = cartona;
-
-  document.querySelector("#logged-items-count").textContent =
-    `Logged Items (${foodLog.length})`;
-
-  document.querySelector("#clear-foodlog").style.display = "block";
-}
 
 // ==============================
 // Remove One Item
@@ -1979,13 +2038,28 @@ loggedItems.addEventListener("click", function (e) {
 // ==============================
 
 document.querySelector("#clear-foodlog").addEventListener("click", function () {
-  foodLog = [];
-
-  localStorage.setItem("foodLog", JSON.stringify(foodLog));
-
-  showLoggedItems();
+  showDeleteAlert();
 });
 
+function showDeleteAlert() {
+  Swal.fire({
+    icon: "warning",
+    title: "Are you want to delete all?",
+    showCancelButton: true,
+    confirmButtonText: "Yes, Delete",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#6b7280",
+  }).then(function (result) {
+    if (result.isConfirmed) {
+      foodLog = [];
+
+      localStorage.setItem("foodLog", JSON.stringify(foodLog));
+
+      displayFoodLog();
+    }
+  });
+}
 // ==============================
 // Nutrition
 // ==============================
@@ -2032,7 +2106,6 @@ function updateNutrition() {
   cards[1].querySelector(".bg-blue-500").style.width =
     Math.min((nutrition.protein / 50) * 100, 100) + "%";
 
-  
   cards[2].querySelector("span:last-child").textContent =
     `${nutrition.carbs} / 250 g`;
 
@@ -2200,7 +2273,15 @@ updateWeeklyStats();
 // ==============================
 // Run
 // ==============================
-displayWeeklyChart();
-showLoggedItems();
-updateNutrition();
-displayFoodLogDate();
+
+openPageFromHash();
+function showMealLogged() {
+  Swal.fire({
+    icon: "success",
+    title: "Meal Logged!",
+    text: "Your meal has been added to your daily log.",
+    showConfirmButton: false,
+    timer: 2500,
+    timerProgressBar: true,
+  });
+}
